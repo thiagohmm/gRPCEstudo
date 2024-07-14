@@ -14,3 +14,8 @@ $ export PATH="$PATH:$(go env GOPATH)/bin"
 
 #Usado para gerar as entidades do contrato protobuff executado na main
 $ protoc --go_out=. --go-grpc_out=. proto/course_category.proto
+
+
+
+#Install EVANS CIENT
+go install github.com/ktr0731/evans@latest

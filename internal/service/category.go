@@ -2,21 +2,23 @@ package service
 
 import (
 	"context"
+	"io"
 
 	"github.com/thiagohmm/gRPCEstudo/internal/database"
 	"github.com/thiagohmm/gRPCEstudo/internal/pb"
+	// Add this line to import the package that defines pb.GetCategoryRequest
 )
 
-type CatefgoryService struct {
+type CategoryServiceProto struct {
 	pb.UnimplementedCategoryServiceServer
 	CategoryDB database.Category
 }
 
-func NewCategoryService(categoryDB database.Category) *CatefgoryService {
-	return &CatefgoryService{CategoryDB: categoryDB}
+func NewCategoryService(categoryDB database.Category) *CategoryServiceProto {
+	return &CategoryServiceProto{CategoryDB: categoryDB}
 }
 
-func (c *CatefgoryService) CreateCategory(ctx context.Context, in *pb.CreateCategoryRequest) (*pb.CategoryResponse, error) {
+func (c *CategoryServiceProto) CreateCategory(ctx context.Context, in *pb.CreateCategoryRequest) (*pb.Category, error) {
 	category, err := c.CategoryDB.Create(in.Name, in.Description)
 	if err != nil {
 		return nil, err
@@ -26,5 +28,58 @@ func (c *CatefgoryService) CreateCategory(ctx context.Context, in *pb.CreateCate
 		Name:        category.Name,
 		Description: category.Description,
 	}
-	return &pb.CategoryResponse{Category: categoryResponse}, nil
+	return categoryResponse, nil
+}
+
+func (c *CategoryServiceProto) ListCategories(ctx context.Context, in *pb.Blank) (*pb.CategoryList, error) {
+	categories, err := c.CategoryDB.FindAll()
+	if err != nil {
+		return nil, err
+	}
+	var categoryList []*pb.Category
+	for _, category := range categories {
+		categoryList = append(categoryList, &pb.Category{
+			Id:          category.ID,
+			Name:        category.Name,
+			Description: category.Description,
+		})
+	}
+	return &pb.CategoryList{Categories: categoryList}, nil
+
+}
+
+func (c *CategoryServiceProto) GetCategory(ctx context.Context, in *pb.CategoryGetRequest) (*pb.Category, error) {
+	category, err := c.CategoryDB.Find(in.Id)
+	if err != nil {
+		return nil, err
+	}
+	categoryResponse := &pb.Category{
+		Id:          category.ID,
+		Name:        category.Name,
+		Description: category.Description,
+	}
+	return categoryResponse, nil
+}
+
+func (c *CategoryServiceProto) CreateCateoryStream(stream pb.CategoryService_CreateCateoryStreamServer) error {
+	categories := []*pb.Category{}
+	for {
+		categor, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&pb.CategoryList{Categories: categories})
+		}
+		if err != nil {
+			return err
+		}
+		category, err := c.CategoryDB.Create(categor.Name, categor.Description)
+		if err != nil {
+			return err
+		}
+		categories = append(categories, &pb.Category{
+			Id:          category.ID,
+			Name:        category.Name,
+			Description: category.Description,
+		})
+
+	}
 }

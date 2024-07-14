@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/thiagohmm/gRPCEstudo/internal/database"
 	"github.com/thiagohmm/gRPCEstudo/internal/pb"
 	"github.com/thiagohmm/gRPCEstudo/internal/service"
@@ -12,9 +13,11 @@ import (
 )
 
 func main() {
-	db, err := sql.Open("Sqlite3", "./db.sqlite")
+	db, err := sql.Open("sqlite3", "db.sqlite")
 	if err != nil {
-		panic(err)
+		panic("Error opening database")
+		//return
+
 	}
 	defer db.Close()
 
@@ -23,6 +26,7 @@ func main() {
 
 	server := grpc.NewServer()
 	pb.RegisterCategoryServiceServer(server, categoryService)
+
 	reflection.Register(server)
 
 	listen, err := net.Listen("tcp", ":50051")
